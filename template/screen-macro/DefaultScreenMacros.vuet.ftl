@@ -616,7 +616,27 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
                 <#assign formSaveFindUrl = sri.buildUrl("formSaveFind").path>
                 <#assign descLabel = ec.getL10n().localize("Description")>
                 <#if activeFormListFind?has_content>
-                    <h5>${ec.getL10n().localize("Active Saved Find:")} ${activeFormListFind.description?html}</h5>
+                    <#assign screenScheduled = formListInfo.getScreenForm().getFormListFindScreenScheduled(activeFormListFind.formListFindId, ec)!>
+                    <div><strong>${ec.getL10n().localize("Active Saved Find:")} ${activeFormListFind.description?html}</strong></div>
+                    <#if screenScheduled?has_content>
+                        <p>(Scheduled for <#if screenScheduled.renderMode! == 'xsl-fo'>PDF<#else>${screenScheduled.renderMode!?upper_case}</#if><#rt>
+                            <#t> ${Static["org.moqui.impl.service.ScheduledJobRunner"].getCronDescription(screenScheduled.cronExpression, ec.user.getLocale(), true)!})</p>
+                    <#else>
+                        <m-form class="form-inline" id="${formId}_SCHED" action="${formSaveFindUrl}">
+                            <input type="hidden" name="formListFindId" value="${activeFormListFind.formListFindId}">
+                            <input type="hidden" name="screenPath" value="${sri.getScreenUrlInstance().path}">
+                            <div class="form-group">
+                                <label class="sr-only" for="${formId}_SCHED_renderMode">${ec.getL10n().localize("Mode")}</label>
+                                <drop-down name="renderMode" id="${formId}_SCHED_renderMode" :options="[{id:'xlsx',text:'XLSX'},{id:'csv',text:'CSV'},{id:'xsl-fo',text:'PDF'}]"></drop-down>
+                            </div>
+                            <div class="form-group">
+                                <label class="sr-only" for="${formId}_SCHED_cronSelected">${ec.getL10n().localize("Schedule")}</label>
+                                <drop-down name="cronSelected" id="${formId}_SCHED_cronSelected" value="" :options="[{id:'0 0 6 ? * MON-FRI',text:'Monday-Friday'},{id:'0 0 6 ? * *',text:'Every Day'},{id:'0 0 6 ? * MON',text:'Monday Only'},{id:'0 0 6 1 * ?',text:'Monthly'}]"></drop-down>
+                            </div>
+
+                            <button type="submit" name="ScheduleFind" class="btn btn-primary btn-sm" onclick="return confirm('${ec.getL10n().localize("Setup a schedule to send this saved find to you by email?")}');">${ec.getL10n().localize("Schedule")}</button>
+                        </m-form>
+                    </#if>
                 </#if>
                 <#if currentFindUrlParms?has_content>
                     <div><m-form class="form-inline" id="${formId}_NewFind" action="${formSaveFindUrl}">
@@ -637,7 +657,9 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
                 <#list userFindInfoList as userFindInfo>
                     <#assign formListFind = userFindInfo.formListFind>
                     <#assign findParameters = userFindInfo.findParameters>
-                    <#assign doFindUrl = sri.buildUrl(sri.getScreenUrlInstance().path).addParameters(findParameters)>
+                    <#-- use only formListFindId now that ScreenRenderImpl picks it up and auto adds configured parameters:
+                        <#assign doFindUrl = sri.buildUrl(sri.getScreenUrlInstance().path).addParameters(findParameters)> -->
+                    <#assign doFindUrl = sri.buildUrl(sri.getScreenUrlInstance().path).addParameter("formListFindId", formListFind.formListFindId)>
                     <#assign saveFindFormId = formId + "_SaveFind" + userFindInfo_index>
                     <div>
                     <#if currentFindUrlParms?has_content>
@@ -901,7 +923,9 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
                         <#list userFindInfoList as userFindInfo>
                             <#assign formListFind = userFindInfo.formListFind>
                             <#assign findParameters = userFindInfo.findParameters>
-                            <#assign doFindUrl = sri.buildUrl(sri.getScreenUrlInstance().path).addParameters(findParameters)>
+                            <#-- use only formListFindId now that ScreenRenderImpl picks it up and auto adds configured parameters:
+                                <#assign doFindUrl = sri.buildUrl(sri.getScreenUrlInstance().path).addParameters(findParameters)> -->
+                            <#assign doFindUrl = sri.buildUrl(sri.getScreenUrlInstance().path).addParameter("formListFindId", formListFind.formListFindId)>
                             <option value="${formListFind.formListFindId}"<#if formListFind.formListFindId == ec.getContext().formListFindId!> selected="selected"</#if> data-action="${doFindUrl.pathWithParams}">${userFindInfo.description?html}</option>
                         </#list>
                     </select>
@@ -954,10 +978,10 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
             </#if>
 
             <#if (context[listName + "Count"]!0) == 0>
-                <#assign entityFindNode = (formNode["entity-find"][0])!>
-                <#assign sfiNode = (entityFindNode["search-form-inputs"][0])!>
-                <#if (ec.resource.expand(sfiNode["@require-parameters"]!, "")) == "true">
-                    <h4 class="text-warning" style="display:inline-block;padding-top:2px;">${ec.getL10n().localize("Select Find Options to view results")}</h4>
+                <#if context.getSharedMap().get("_entityListNoSearchParms")!false == true>
+                    <h4 class="text-warning" style="display:inline-block;padding-top:2px;">${ec.getL10n().localize("Find Options required to view results")}</h4>
+                <#else>
+                    <h4 class="text-warning" style="display:inline-block;padding-top:2px;">${ec.getL10n().localize("No results found")}</h4>
                 </#if>
             </#if>
         </nav>
@@ -991,7 +1015,7 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
                 <#assign hiddenParameterMap = sri.getFormHiddenParameters(formNode)>
                 <#assign hiddenParameterKeys = hiddenParameterMap.keySet()>
                 <#assign curUrlInstance = sri.getCurrentScreenUrl()>
-                <form-link name="${headerFormId}" id="${headerFormId}" action="${curUrlInstance.path}">
+                <form-link name="${headerFormId}_clr" id="${headerFormId}_clr" action="${curUrlInstance.path}">
                     <#list hiddenParameterKeys as hiddenParameterKey><input type="hidden" name="${hiddenParameterKey}" value="${hiddenParameterMap.get(hiddenParameterKey)!""}"></#list>
                     <button id="${headerFormId}-quick-clear" type="submit" name="clearParameters" style="float:left; padding: 0 5px 0 5px; margin: 0 4px 0 0;" class="btn btn-primary btn-sm"><i class="fa fa-remove"></i></button>
                 </form-link>

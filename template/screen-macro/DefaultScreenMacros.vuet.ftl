@@ -716,12 +716,12 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
                                             <#assign caseInsensitive = showOrderBy == "case-insensitive">
                                             <#assign orderFieldName = fieldNode["@name"]>
                                             <#assign orderFieldTitle><@fieldTitle headerFieldNode/></#assign>
-                                            <option value="${"+" + caseInsensitive?string("^", "") + orderFieldName}">${orderFieldTitle} ${ec.getL10n().localize("(Asc)")}</option>
+                                            <option value="${caseInsensitive?string("^", "") + orderFieldName}">${orderFieldTitle} ${ec.getL10n().localize("(Asc)")}</option>
                                             <option value="${"-" + caseInsensitive?string("^", "") + orderFieldName}">${orderFieldTitle} ${ec.getL10n().localize("(Desc)")}</option>
                                         </#if>
                                     </#if></#list>
                                 </select>
-                                <input type="hidden" id="${headerFormId}_orderByField" name="orderByField" value="${orderByField!""}">
+                                <input type="hidden" id="${headerFormId}_orderByField" name="orderByField" value="${(orderByField!"")?html}">
                                 <m-script>
                                     $("#${headerFormId}_orderBySelect").selectivity({ positionDropdown: function(dropdownEl, selectEl) { dropdownEl.css("width", "300px"); } })[0].selectivity.filterResults = function(results) {
                                         // Filter out asc and desc options if anyone selected.
@@ -912,8 +912,7 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
     <#assign isPaginated = (!(formNode["@paginate"]! == "false") && context[listName + "Count"]?? && (context[listName + "Count"]! > 0) &&
             (!formNode["@paginate-always-show"]?has_content || formNode["@paginate-always-show"]! == "true" || (context[listName + "PageMaxIndex"] > 0)))>
     <#if (isHeaderDialog || isSavedFinds || isSelectColumns || isPaginated) && hideNav! != "true">
-        <tr class="form-list-nav-row"><th colspan="${numColumns}">
-        <nav class="form-list-nav">
+        <tr class="form-list-nav-row"><th colspan="${numColumns}"><nav class="form-list-nav">
             <#if isSavedFinds>
                 <#assign userFindInfoList = formListInfo.getUserFormListFinds(ec)>
                 <#if userFindInfoList?has_content>
@@ -1003,8 +1002,7 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
                     <h4 class="text-warning" style="display:inline-block;padding-top:2px;">${ec.getL10n().localize("No results found")}</h4>
                 </#if>
             </#if>
-        </nav>
-        </th></tr>
+        </nav></th></tr>
 
         <#if isHeaderDialog>
         <tr><th colspan="${numColumns}" style="font-weight: normal">
@@ -1356,7 +1354,7 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
                 <form-paginate :paginate="{ count:${context[listName + "Count"]?c}, pageIndex:${context[listName + "PageIndex"]?c},<#rt>
                     <#t> pageSize:${context[listName + "PageSize"]?c}, pageMaxIndex:${context[listName + "PageMaxIndex"]?c},
                     <#lt> pageRangeLow:${context[listName + "PageRangeLow"]?c}, pageRangeHigh:${context[listName + "PageRangeHigh"]?c} }"></form-paginate>
-            </nav></td></tr>
+            </nav></th></tr>
         </#if>
         <#if !isServerStatic></tbody></#if>
         <#assign ownerForm = "">
@@ -1397,7 +1395,7 @@ ${sri.renderIncludeScreen(.node["@location"], .node["@share-scope"]!)}
             </#if>
             <#assign ascActive = curOrderByField?has_content && curOrderByField?contains(curFieldName) && !curOrderByField?starts_with("-")>
             <#assign descActive = curOrderByField?has_content && curOrderByField?contains(curFieldName) && curOrderByField?starts_with("-")>
-            <#assign ascOrderByUrlInfo = sri.getScreenUrlInstance().cloneUrlInstance().addParameter("orderByField", "+" + caseInsensitive?string("^","") + curFieldName)>
+            <#assign ascOrderByUrlInfo = sri.getScreenUrlInstance().cloneUrlInstance().addParameter("orderByField", caseInsensitive?string("^","") + curFieldName)>
             <#assign descOrderByUrlInfo = sri.getScreenUrlInstance().cloneUrlInstance().addParameter("orderByField", "-" + caseInsensitive?string("^","") + curFieldName)>
             <#if ascActive><#assign ascOrderByUrlInfo = descOrderByUrlInfo></#if>
             <#if descActive><#assign descOrderByUrlInfo = ascOrderByUrlInfo></#if>
@@ -1614,7 +1612,7 @@ a => A, d => D, y => Y
     <date-time id="<@fieldId .node/>" name="<@fieldName .node/>" value="${fieldValue?html}" type="${.node["@type"]!""}" size="${.node["@size"]!""}"<#rt>
         <#t><#if .node?parent["@tooltip"]?has_content> tooltip="${ec.getResource().expand(.node?parent["@tooltip"], "")}"</#if>
         <#t><#if ownerForm?has_content> form="${ownerForm}"</#if><#if javaFormat?has_content> format="<@getMomentDateFormat javaFormat/>"</#if>
-        <#t><#if validationClasses?contains("required")> required="required"</#if> auto-year="${.node["@auto-year"]!"true"}"/>
+        <#t><#if validationClasses?contains("required")> required="required"</#if> auto-year="${.node["@auto-year"]!"true"}" :minuteStep="${.node["@minute-stepping"]!"5"}"/>
 </#macro>
 
 <#macro display>
